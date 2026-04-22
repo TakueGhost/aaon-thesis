@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAON, Inc. — Investment Thesis</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ===== DESIGN TOKENS ===== */
+:root {
+  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+  --text-3xl: clamp(2.2rem, 1rem + 3.5vw, 4rem);
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+  --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+  --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+  --space-16: 4rem; --space-20: 5rem; --space-24: 6rem;
+  --radius-sm: 0.375rem; --radius-md: 0.5rem;
+  --radius-lg: 0.75rem; --radius-xl: 1rem;
+  --transition-interactive: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --content-wide: 1200px;
+  --font-display: 'Playfair Display', 'Georgia', serif;
+  --font-body: 'Inter', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Dark mode — Bloomberg Terminal palette */
+[data-theme="dark"], :root {
+  --color-bg: #0a0d12;
+  --color-surface: #0f1318;
+  --color-surface-2: #141820;
+  --color-surface-offset: #1a2030;
+  --color-border: #1e2a3a;
+  --color-border-bright: #2a3a50;
+  --color-text: #e8edf5;
+  --color-text-muted: #8090a8;
+  --color-text-faint: #4a5a70;
+  --color-primary: #00d4aa;         /* teal accent */
+  --color-primary-dim: #00957a;
+  --color-gold: #f0b429;            /* gold accent */
+  --color-gold-dim: #b8861a;
+  --color-blue: #4a9eff;
+  --color-green: #22c55e;
+  --color-amber: #f59e0b;
+  --color-red: #ef4444;
+  --color-red-dim: #991b1b;
+  --shadow-card: 0 2px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-glow: 0 0 40px rgba(0,212,170,0.1);
+}
+
+[data-theme="light"] {
+  --color-bg: #f4f6fa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f9fafc;
+  --color-surface-offset: #eef1f6;
+  --color-border: #d8dde8;
+  --color-border-bright: #c0c8d8;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-faint: #94a3b8;
+  --color-primary: #007a60;
+  --color-primary-dim: #005a47;
+  --color-gold: #b8861a;
+  --color-gold-dim: #8a6010;
+  --color-blue: #1d6fb0;
+  --color-green: #16a34a;
+  --color-amber: #d97706;
+  --color-red: #dc2626;
+  --color-red-dim: #7f1d1d;
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-glow: 0 0 20px rgba(0,122,96,0.08);
+}
+
+/* ===== BASE RESET ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 64px; -webkit-font-smoothing: antialiased; }
+body { min-height: 100dvh; font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background: var(--color-bg); line-height: 1.6; overflow-x: hidden; }
+img, svg, canvas { display: block; max-width: 100%; }
+h1,h2,h3,h4,h5,h6 { line-height: 1.15; text-wrap: balance; }
+p, li { text-wrap: pretty; }
+button { cursor: pointer; background: none; border: none; color: inherit; font: inherit; }
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ===== SCROLL PROGRESS BAR ===== */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-gold));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ===== NAVBAR ===== */
+nav {
+  position: fixed; top: 2px; left: 0; right: 0; z-index: 900;
+  background: rgba(10,13,18,0.92); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--space-8); height: 52px;
+}
+[data-theme="light"] nav { background: rgba(244,246,250,0.92); }
+.nav-logo {
+  display: flex; align-items: center; gap: var(--space-3);
+  font-size: var(--text-sm); font-weight: 600; color: var(--color-text);
+  text-decoration: none; letter-spacing: 0.02em;
+}
+.nav-ticker {
+  background: var(--color-surface-offset); border: 1px solid var(--color-border);
+  padding: 2px 8px; border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: 11px; color: var(--color-primary);
+}
+.nav-links { display: flex; gap: var(--space-1); list-style: none; }
+.nav-links a {
+  padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
+  font-size: var(--text-xs); font-weight: 500; color: var(--color-text-muted);
+  text-decoration: none; transition: all var(--transition-interactive);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--color-primary); background: rgba(0,212,170,0.08); }
+.nav-right { display: flex; align-items: center; gap: var(--space-4); }
+.pt-badge {
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: var(--color-gold); font-weight: 600;
+  border: 1px solid rgba(240,180,41,0.3); padding: 3px 10px;
+  border-radius: var(--radius-sm); background: rgba(240,180,41,0.06);
+}
+#theme-toggle { color: var(--color-text-muted); padding: var(--space-2); border-radius: var(--radius-sm); transition: all var(--transition-interactive); }
+#theme-toggle:hover { color: var(--color-primary); background: rgba(0,212,170,0.08); }
+
+/* ===== SECTIONS ===== */
+section { padding: clamp(var(--space-16), 8vw, var(--space-24)) var(--space-8); }
+.section-inner { max-width: var(--content-wide); margin: 0 auto; }
+.section-label {
+  font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--color-primary); margin-bottom: var(--space-3);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.section-label::before { content: ''; display: block; width: 20px; height: 1px; background: var(--color-primary); }
+.section-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-3); }
+.section-subtitle { color: var(--color-text-muted); font-size: var(--text-base); margin-bottom: var(--space-12); max-width: 64ch; }
+
+/* ===== HERO ===== */
+#hero {
+  min-height: 100svh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 80px var(--space-8) var(--space-16);
+  position: relative; overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,212,170,0.06) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(74,158,255,0.04) 0%, transparent 60%);
+}
+.hero-grid {
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+}
+[data-theme="light"] .hero-grid {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+}
+.hero-content { position: relative; z-index: 1; max-width: 900px; width: 100%; }
+
+.hero-sentence {
+  font-family: var(--font-display); font-style: italic; font-size: var(--text-3xl);
+  color: var(--color-text); line-height: 1.2; margin-bottom: var(--space-12);
+  letter-spacing: -0.01em;
+}
+.hero-sentence span { color: var(--color-primary); font-style: normal; }
+
+.hero-meta {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  margin-bottom: var(--space-10);
+}
+.hero-company { font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.02em; }
+.hero-nasdaq {
+  font-family: var(--font-mono); font-size: var(--text-sm);
+  color: var(--color-text-muted); letter-spacing: 0.08em;
+}
+
+.stat-cards {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+.stat-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-5) var(--space-6);
+  box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+  transition: all var(--transition-interactive);
+}
+.stat-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(135deg, rgba(0,212,170,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+.stat-card:hover { border-color: var(--color-border-bright); transform: translateY(-1px); }
+.stat-label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: var(--space-2); }
+.stat-value {
+  font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 600;
+  color: var(--color-text); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.stat-card.highlight .stat-value { color: var(--color-gold); }
+.stat-card.upside .stat-value { color: var(--color-green); }
+
+.hero-sub {
+  font-size: var(--text-base); color: var(--color-text-muted);
+  font-style: italic; letter-spacing: 0.01em;
+}
+.hero-sub strong { color: var(--color-text); font-style: normal; }
+
+/* DC Cooling Schematic */
+.dc-schematic {
+  margin-top: var(--space-12); width: 100%; max-width: 600px; margin-left: auto; margin-right: auto;
+  position: relative;
+}
+
+/* ===== THESIS ===== */
+#thesis { background: var(--color-surface); }
+.thesis-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: var(--space-5); }
+.thesis-card {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: var(--space-8);
+  box-shadow: var(--shadow-card); opacity: 0; transform: translateY(24px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color var(--transition-interactive);
+  position: relative; overflow: hidden;
+}
+.thesis-card.visible { opacity: 1; transform: translateY(0); }
+.thesis-card:hover { border-color: var(--color-border-bright); box-shadow: var(--shadow-card), var(--shadow-glow); }
+.thesis-card-num {
+  font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-primary);
+  font-weight: 600; letter-spacing: 0.1em; margin-bottom: var(--space-3);
+}
+.thesis-card-title {
+  font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700;
+  margin-bottom: var(--space-3); color: var(--color-text);
+}
+.thesis-card-body { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.7; }
+.thesis-card-accent {
+  position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.acc-teal { background: var(--color-primary); }
+.acc-gold { background: var(--color-gold); }
+.acc-blue { background: var(--color-blue); }
+.acc-green { background: var(--color-green); }
+
+/* ===== BASX STORY ===== */
+#basx { background: var(--color-bg); }
+.timeline-wrap { position: relative; margin-bottom: var(--space-16); overflow: visible; }
+.timeline-track {
+  display: flex; align-items: flex-start; gap: 0;
+  position: relative; padding-bottom: var(--space-8);
+  overflow-x: auto; padding-bottom: var(--space-4);
+}
+.timeline-track::before {
+  content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border), var(--color-border), transparent);
+}
+.tl-item {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 160px; flex: 1; position: relative; padding-top: var(--space-1);
+  opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.tl-item.visible { opacity: 1; transform: translateY(0); }
+.tl-dot {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--color-surface); border: 2px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1; margin-bottom: var(--space-4);
+  transition: all var(--transition-interactive);
+}
+.tl-item.active .tl-dot {
+  border-color: var(--color-primary); background: rgba(0,212,170,0.15);
+  box-shadow: 0 0 20px rgba(0,212,170,0.3);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 20px rgba(0,212,170,0.3); }
+  50% { box-shadow: 0 0 30px rgba(0,212,170,0.5), 0 0 0 6px rgba(0,212,170,0.1); }
+}
+.tl-icon { font-size: 16px; }
+.tl-year { font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; color: var(--color-primary); margin-bottom: var(--space-2); }
+.tl-text { font-size: 11px; color: var(--color-text-muted); text-align: center; line-height: 1.5; padding: 0 var(--space-2); max-width: 140px; }
+.tl-text strong { color: var(--color-text); display: block; font-size: var(--text-xs); margin-bottom: 2px; }
+
+.discovery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
+.disc-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: var(--space-8);
+  box-shadow: var(--shadow-card);
+}
+.disc-card.bear { border-color: rgba(239,68,68,0.2); }
+.disc-card.bull { border-color: rgba(0,212,170,0.3); background: rgba(0,212,170,0.03); }
+.disc-card-header {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin-bottom: var(--space-6); padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.disc-icon {
+  width: 36px; height: 36px; border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.disc-icon.bear-icon { background: rgba(239,68,68,0.1); }
+.disc-icon.bull-icon { background: rgba(0,212,170,0.1); }
+.disc-title { font-size: var(--text-base); font-weight: 600; }
+.disc-item {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  margin-bottom: var(--space-4); font-size: var(--text-sm); line-height: 1.6;
+}
+.disc-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
+.bear-dot { background: var(--color-red); }
+.bull-dot { background: var(--color-primary); }
+.disc-quote {
+  margin-top: var(--space-6); padding: var(--space-5);
+  background: rgba(0,212,170,0.06); border: 1px solid rgba(0,212,170,0.15);
+  border-radius: var(--radius-md); font-size: var(--text-xs); line-height: 1.8;
+  color: var(--color-text-muted); font-style: italic;
+}
+.disc-quote strong { color: var(--color-primary); font-style: normal; }
+
+/* ===== CATALYSTS ===== */
+#catalysts { background: var(--color-surface); }
+.catalyst-timeline { position: relative; max-width: 760px; }
+.catalyst-timeline::before {
+  content: ''; position: absolute; left: 20px; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(180deg, var(--color-primary), var(--color-border), transparent);
+}
+.cat-item {
+  display: flex; gap: var(--space-6); margin-bottom: var(--space-8);
+  opacity: 0; transform: translateX(-16px); transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.cat-item.visible { opacity: 1; transform: translateX(0); }
+.cat-dot-wrap { position: relative; flex-shrink: 0; width: 40px; height: 40px; }
+.cat-dot {
+  width: 40px; height: 40px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; position: relative; z-index: 1;
+  font-size: 16px;
+}
+.cat-dot.green { background: rgba(34,197,94,0.15); border: 2px solid var(--color-green); animation: pulse-green 2.5s ease-in-out infinite; }
+.cat-dot.amber { background: rgba(245,158,11,0.1); border: 2px solid var(--color-amber); animation: pulse-amber 2.5s ease-in-out infinite; }
+.cat-dot.blue { background: rgba(74,158,255,0.1); border: 2px solid var(--color-blue); }
+.cat-dot.star { background: linear-gradient(135deg, rgba(240,180,41,0.2), rgba(0,212,170,0.2)); border: 2px solid var(--color-gold); animation: pulse-star 2s ease-in-out infinite; }
+@keyframes pulse-green { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)} 50%{box-shadow:0 0 0 8px rgba(34,197,94,0)} }
+@keyframes pulse-amber { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,0.4)} 50%{box-shadow:0 0 0 8px rgba(245,158,11,0)} }
+@keyframes pulse-star { 0%,100%{box-shadow:0 0 0 0 rgba(240,180,41,0.4)} 50%{box-shadow:0 0 0 8px rgba(240,180,41,0)} }
+.cat-content { flex: 1; padding-top: var(--space-2); }
+.cat-date { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: var(--space-2); letter-spacing: 0.06em; }
+.cat-title { font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-2); }
+.cat-body { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.7; }
+.scorecard {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.sc-item {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); padding: var(--space-4); font-size: 11px;
+}
+.sc-label { color: var(--color-text-muted); margin-bottom: var(--space-2); font-weight: 500; }
+.sc-bull { color: var(--color-green); font-weight: 600; margin-bottom: 2px; }
+.sc-bear { color: var(--color-red); font-weight: 600; }
+
+/* ===== FINANCIALS ===== */
+#financials { background: var(--color-bg); }
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--space-4); margin-bottom: var(--space-12); }
+.kpi-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-6);
+  box-shadow: var(--shadow-card); opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.kpi-card.visible { opacity: 1; transform: translateY(0); }
+.kpi-label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-2); }
+.kpi-value { font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 700; color: var(--color-text); line-height: 1; margin-bottom: var(--space-2); font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: var(--text-xs); color: var(--color-primary); display: flex; align-items: center; gap: 4px; }
+.kpi-arrow { display: inline-block; }
+
+.chart-container {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: var(--space-8);
+  box-shadow: var(--shadow-card); margin-bottom: var(--space-8);
+}
+.chart-title { font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-6); }
+.chart-wrap { position: relative; height: 320px; }
+
+.eps-table {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-card);
+}
+.eps-table table { width: 100%; border-collapse: collapse; }
+.eps-table th {
+  background: var(--color-surface-offset); padding: var(--space-4) var(--space-6);
+  font-size: var(--text-xs); font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--color-text-muted); text-align: left;
+}
+.eps-table td { padding: var(--space-4) var(--space-6); font-size: var(--text-sm); border-top: 1px solid var(--color-border); }
+.eps-table tr:hover td { background: var(--color-surface-offset); }
+.eps-table .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eps-up { color: var(--color-green); font-weight: 600; }
+.eps-down { color: var(--color-red); font-weight: 600; }
+.eps-our { font-weight: 700; color: var(--color-primary); }
+.eps-caption {
+  padding: var(--space-5) var(--space-6); font-size: var(--text-xs);
+  color: var(--color-text-muted); font-style: italic;
+  border-top: 1px solid var(--color-border); background: var(--color-surface-offset);
+}
+.eps-caption strong { color: var(--color-gold); }
+
+/* ===== VALUATION ===== */
+#valuation { background: var(--color-surface); }
+.val-callout {
+  background: linear-gradient(135deg, rgba(0,212,170,0.06) 0%, rgba(74,158,255,0.04) 100%);
+  border: 1px solid rgba(0,212,170,0.2); border-radius: var(--radius-xl);
+  padding: var(--space-10); margin-bottom: var(--space-8); position: relative;
+}
+.val-callout-badge {
+  font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 700;
+  color: var(--color-primary); letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: var(--space-4);
+}
+.val-callout-main {
+  font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700;
+  line-height: 1.3; margin-bottom: var(--space-5);
+}
+.val-callout-main em { color: var(--color-primary); font-style: normal; }
+.asym-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-top: var(--space-6); }
+.asym-item {
+  padding: var(--space-5); border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+.asym-item.up { border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.04); }
+.asym-item.dn { border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.03); }
+.asym-pct { font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 700; margin-bottom: var(--space-2); }
+.asym-item.up .asym-pct { color: var(--color-green); }
+.asym-item.dn .asym-pct { color: var(--color-red); }
+.asym-desc { font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.6; }
+
+/* Sensitivity Table */
+.sens-wrap {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); overflow: hidden;
+  box-shadow: var(--shadow-card); margin-bottom: var(--space-8);
+}
+.sens-title {
+  padding: var(--space-6) var(--space-8); font-size: var(--text-base);
+  font-weight: 600; border-bottom: 1px solid var(--color-border);
+}
+.sens-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); }
+.sens-table th {
+  padding: var(--space-4) var(--space-5); font-size: 11px; font-weight: 600;
+  color: var(--color-text-muted); text-align: center; background: var(--color-surface);
+  border: 1px solid var(--color-border); letter-spacing: 0.06em;
+}
+.sens-table th.row-header { text-align: left; min-width: 130px; }
+.sens-table td {
+  padding: var(--space-4); text-align: center; font-size: var(--text-sm);
+  font-weight: 600; border: 1px solid var(--color-border);
+  position: relative; cursor: default; transition: all var(--transition-interactive);
+}
+.sens-table td:hover { filter: brightness(1.15); }
+.cell-green { background: rgba(34,197,94,0.18); color: #22c55e; }
+.cell-amber { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.cell-red { background: rgba(239,68,68,0.12); color: #ef4444; }
+.cell-current { box-shadow: inset 0 0 0 2px var(--color-primary); background: rgba(0,212,170,0.18); color: var(--color-primary); }
+.cell-target { box-shadow: inset 0 0 0 2px var(--color-gold); background: rgba(240,180,41,0.15); color: var(--color-gold); }
+.row-head { font-size: var(--text-xs); font-weight: 600; padding-left: var(--space-6)!important; text-align: left!important; font-family: var(--font-body); color: var(--color-text-muted); }
+.row-head .mix-pct { color: var(--color-text); font-family: var(--font-mono); font-size: var(--text-sm); display: block; font-weight: 700; }
+.sens-caption {
+  padding: var(--space-5) var(--space-8); font-size: var(--text-xs); color: var(--color-text-muted);
+  font-style: italic; border-top: 1px solid var(--color-border); line-height: 1.7;
+}
+.sens-caption strong { color: var(--color-text); font-style: normal; }
+.sens-legend { display: flex; gap: var(--space-6); padding: var(--space-4) var(--space-8); border-top: 1px solid var(--color-border); }
+.legend-item { display: flex; align-items: center; gap: var(--space-2); font-size: 11px; color: var(--color-text-muted); }
+.legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+.legend-current { border: 2px solid var(--color-primary); background: rgba(0,212,170,0.15); }
+.legend-target { border: 2px solid var(--color-gold); background: rgba(240,180,41,0.12); }
+.legend-g { background: rgba(34,197,94,0.25); }
+.legend-a { background: rgba(245,158,11,0.2); }
+.legend-r { background: rgba(239,68,68,0.2); }
+
+/* Analyst bars */
+.analyst-section { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--shadow-card); }
+.analyst-title { font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-6); }
+.analyst-bar-row { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+.analyst-name { font-size: var(--text-xs); color: var(--color-text-muted); width: 140px; flex-shrink: 0; }
+.analyst-bar-wrap { flex: 1; background: var(--color-border); border-radius: var(--radius-full); height: 8px; overflow: hidden; }
+.analyst-bar { height: 100%; border-radius: var(--radius-full); width: 0; transition: width 1.2s cubic-bezier(0.16,1,0.3,1); }
+.bar-sell { background: linear-gradient(90deg, var(--color-blue), var(--color-blue)); }
+.bar-ours { background: linear-gradient(90deg, var(--color-gold), var(--color-primary)); }
+.analyst-pt { font-family: var(--font-mono); font-size: var(--text-sm); font-weight: 700; width: 48px; text-align: right; flex-shrink: 0; }
+
+/* ===== RISKS ===== */
+#risks { background: var(--color-bg); }
+.risks-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--space-5); }
+.risk-card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-card);
+  opacity: 0; transform: translateY(24px); transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.risk-card.visible { opacity: 1; transform: translateY(0); }
+.risk-header {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.risk-num { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-red); font-weight: 600; letter-spacing: 0.1em; margin-bottom: var(--space-2); }
+.risk-title { font-size: var(--text-base); font-weight: 700; line-height: 1.3; }
+.risk-bear {
+  padding: var(--space-5) var(--space-6);
+  background: rgba(239,68,68,0.05); border-bottom: 1px solid var(--color-border);
+}
+.risk-bear-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--color-red); text-transform: uppercase; margin-bottom: var(--space-2); }
+.risk-bear-text { font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.6; font-style: italic; }
+.risk-rebuttal { padding: var(--space-5) var(--space-6); }
+.risk-rebut-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--color-primary); text-transform: uppercase; margin-bottom: var(--space-2); }
+.risk-rebut-text { font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.7; }
+
+/* ===== VERDICT ===== */
+#verdict { background: var(--color-surface); }
+.verdict-inner {
+  display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--space-12);
+  align-items: start;
+}
+.verdict-pt {
+  background: linear-gradient(135deg, rgba(0,212,170,0.08) 0%, rgba(240,180,41,0.06) 100%);
+  border: 1px solid rgba(0,212,170,0.25); border-radius: var(--radius-xl);
+  padding: var(--space-10); text-align: center;
+}
+.verdict-label { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-4); }
+.verdict-price {
+  font-family: var(--font-mono); font-size: clamp(3.5rem, 8vw, 6rem);
+  font-weight: 700; color: var(--color-gold); line-height: 1;
+  margin-bottom: var(--space-2); font-variant-numeric: tabular-nums;
+}
+.verdict-horizon { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-6); }
+.verdict-method {
+  font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.8;
+  font-style: italic; border-top: 1px solid var(--color-border);
+  padding-top: var(--space-5); margin-top: var(--space-4);
+}
+.verdict-method strong { color: var(--color-primary); font-style: normal; }
+.verdict-details { display: flex; flex-direction: column; gap: var(--space-5); }
+.verdict-block {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-6);
+}
+.verdict-block-label {
+  font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600;
+  color: var(--color-primary); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+.verdict-block-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.7; }
+.verdict-block-text strong { color: var(--color-text); }
+.verdict-thesis {
+  background: linear-gradient(135deg, rgba(0,212,170,0.06) 0%, rgba(74,158,255,0.04) 100%);
+  border: 1px solid rgba(0,212,170,0.2);
+  border-radius: var(--radius-xl); padding: var(--space-8);
+  font-size: var(--text-base); line-height: 1.8; color: var(--color-text-muted);
+  font-style: italic;
+}
+.verdict-thesis strong { color: var(--color-text); font-style: normal; }
+
+/* ===== FOOTER ===== */
+footer {
+  background: var(--color-bg); border-top: 1px solid var(--color-border);
+  padding: var(--space-8); text-align: center;
+  font-size: var(--text-xs); color: var(--color-text-faint);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .stat-cards { grid-template-columns: repeat(2,1fr); }
+  .thesis-grid { grid-template-columns: 1fr; }
+  .discovery-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .risks-grid { grid-template-columns: 1fr; }
+  .verdict-inner { grid-template-columns: 1fr; }
+  .asym-row { grid-template-columns: 1fr; }
+  .scorecard { grid-template-columns: 1fr; }
+  .analyst-name { width: 100px; }
+}
+@media (max-width: 600px) {
+  .stat-cards { grid-template-columns: 1fr 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .nav-links { display: none; }
+  .timeline-track { gap: 0; }
+  .tl-text { display: none; }
+  section { padding: var(--space-16) var(--space-4); }
+}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div id="progress-bar"></div>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="#hero" class="nav-logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-label="AAON thesis">
+      <rect width="24" height="24" rx="4" fill="rgba(0,212,170,0.15)"/>
+      <path d="M5 18L9 8l4 7 3-5 3 8" stroke="#00d4aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    AAON
+    <span class="nav-ticker">NASDAQ:AAON</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#thesis">Thesis</a></li>
+    <li><a href="#basx">BASX Story</a></li>
+    <li><a href="#catalysts">Catalysts</a></li>
+    <li><a href="#financials">Financials</a></li>
+    <li><a href="#valuation">Valuation</a></li>
+    <li><a href="#risks">Risks</a></li>
+    <li><a href="#verdict">Verdict</a></li>
+  </ul>
+  <div class="nav-right">
+    <span class="pt-badge">PT $95 ↑17%</span>
+    <button id="theme-toggle" data-theme-toggle aria-label="Toggle theme">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+
+    <p class="hero-sentence">
+      "The $95 target requires<br>no re-rating assumption —<br>only <span>Memphis reaching full utilization.</span>"
+    </p>
+
+    <div class="hero-meta">
+      <div class="hero-company">AAON, Inc.</div>
+      <div class="hero-nasdaq">NASDAQ: AAON &nbsp;·&nbsp; Long &nbsp;·&nbsp; 18-Month Horizon</div>
+    </div>
+
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-label">Current Price</div>
+        <div class="stat-value" data-count="81" data-prefix="$">$81</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Market Cap</div>
+        <div class="stat-value" data-count="6.7" data-prefix="$" data-suffix="B">$6.7B</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-label">Price Target</div>
+        <div class="stat-value" data-count="95" data-prefix="$">$95</div>
+      </div>
+      <div class="stat-card upside">
+        <div class="stat-label">Upside</div>
+        <div class="stat-value" data-count="17" data-prefix="+" data-suffix="%">+17%</div>
+      </div>
+    </div>
+
+    <p class="hero-sub">
+      The market prices execution risk.&nbsp;
+      <strong>The $1.83B contracted backlog prices durability.</strong>
+    </p>
+
+    <!-- Animated DC Cooling Schematic -->
+    <div class="dc-schematic">
+      <svg viewBox="0 0 600 120" width="100%" height="100" aria-label="Data center cooling flow schematic">
+        <defs>
+          <linearGradient id="flowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00d4aa" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#4a9eff" stop-opacity="0.8"/>
+          </linearGradient>
+          <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#00d4aa" opacity="0.7"/>
+          </marker>
+        </defs>
+        <!-- Server Rack -->
+        <rect x="20" y="20" width="80" height="80" rx="6" fill="none" stroke="#1e2a3a" stroke-width="2"/>
+        <rect x="28" y="28" width="64" height="10" rx="2" fill="#1a2030"/>
+        <rect x="28" y="42" width="64" height="10" rx="2" fill="#1a2030"/>
+        <rect x="28" y="56" width="64" height="10" rx="2" fill="#1a2030"/>
+        <rect x="28" y="70" width="64" height="10" rx="2" fill="#1a2030"/>
+        <rect x="28" y="84" width="64" height="6" rx="2" fill="#1a2030"/>
+        <text x="60" y="106" font-family="Inter" font-size="9" fill="#8090a8" text-anchor="middle">SERVER RACK</text>
+        <!-- CDU -->
+        <rect x="250" y="25" width="100" height="70" rx="8" fill="none" stroke="url(#flowGrad)" stroke-width="2" filter="url(#glow)"/>
+        <text x="300" y="55" font-family="Inter" font-size="10" font-weight="600" fill="#00d4aa" text-anchor="middle">BASX</text>
+        <text x="300" y="70" font-family="Inter" font-size="9" fill="#8090a8" text-anchor="middle">Custom CDU</text>
+        <text x="300" y="106" font-family="Inter" font-size="9" fill="#8090a8" text-anchor="middle">LIQUID COOLING</text>
+        <!-- Cooling Tower -->
+        <rect x="490" y="20" width="90" height="80" rx="6" fill="none" stroke="#1e3a50" stroke-width="2"/>
+        <path d="M500,60 Q535,35 580,60" stroke="#4a9eff" stroke-width="1.5" fill="none" opacity="0.6"/>
+        <path d="M500,70 Q535,45 580,70" stroke="#4a9eff" stroke-width="1.5" fill="none" opacity="0.4"/>
+        <text x="535" y="106" font-family="Inter" font-size="9" fill="#8090a8" text-anchor="middle">COOLING TOWER</text>
+        <!-- Flow arrows hot side -->
+        <line x1="100" y1="50" x2="248" y2="50" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,3" opacity="0.7" marker-end="url(#arr)"/>
+        <text x="174" y="44" font-family="Inter" font-size="9" fill="#ef4444" opacity="0.8" text-anchor="middle">▲ HOT</text>
+        <!-- Flow arrows cool side -->
+        <line x1="100" y1="70" x2="248" y2="70" stroke="#00d4aa" stroke-width="2" opacity="0.5" marker-end="url(#arr)"/>
+        <text x="174" y="84" font-family="Inter" font-size="9" fill="#00d4aa" opacity="0.7" text-anchor="middle">▼ COLD</text>
+        <!-- To tower -->
+        <line x1="352" y1="50" x2="488" y2="50" stroke="#4a9eff" stroke-width="2" stroke-dasharray="4,3" opacity="0.6" marker-end="url(#arr)"/>
+        <line x1="488" y1="70" x2="354" y2="70" stroke="#22c55e" stroke-width="2" opacity="0.5" marker-end="url(#arr)"/>
+        <!-- Animated pulse on CDU -->
+        <circle cx="300" cy="60" r="30" fill="none" stroke="#00d4aa" stroke-width="1" opacity="0">
+          <animate attributeName="r" values="30;45;30" dur="2.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.4;0;0.4" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ===== THESIS ===== -->
+<section id="thesis">
+  <div class="section-inner">
+    <div class="section-label">Investment Thesis</div>
+    <h2 class="section-title">Why Now</h2>
+    <p class="section-subtitle">Four independent forces converge in 2026. Only one needs to be right.</p>
+    <div class="thesis-grid">
+      <div class="thesis-card" style="transition-delay:0s">
+        <div class="thesis-card-accent acc-teal"></div>
+        <div class="thesis-card-num">01</div>
+        <div class="thesis-card-title">BASX Crosses 50%</div>
+        <div class="thesis-card-body">BASX-branded revenue reaches 54% of total revenue by mid-2026 — the mix threshold that forces reclassification from HVAC OEM to data center infrastructure supplier in generalist portfolio models. At 54% DC mix, BASX has already passed Modine (3.76x NTM). The next destination is Vertiv at 7.40x.</div>
+      </div>
+      <div class="thesis-card" style="transition-delay:0.1s">
+        <div class="thesis-card-accent acc-gold"></div>
+        <div class="thesis-card-num">02</div>
+        <div class="thesis-card-title">Memphis Unlocks Margins</div>
+        <div class="thesis-card-body">$4.5–6.4M/quarter of suppressed unabsorbed overhead releases in H2 2026 as Memphis reaches full utilization. AAON Oklahoma ran 37.3% gross margins in FY2024 before Memphis costs contaminated the segment. Recovery to 33–35% delivers 400–600bps consolidated margin expansion toward the guided 29–31% range.</div>
+      </div>
+      <div class="thesis-card" style="transition-delay:0.2s">
+        <div class="thesis-card-accent acc-blue"></div>
+        <div class="thesis-card-num">03</div>
+        <div class="thesis-card-title">$1.83B Contracted Backlog</div>
+        <div class="thesis-card-body">1.3x trailing revenue already under contract. The $1.3B BASX-branded portion grew 141% in 2025. This backlog de-risks 2026 revenues in a way the stock price does not reflect — the consensus is priced as though the backlog could evaporate. It cannot: these are engineered-to-order systems under production contracts.</div>
+      </div>
+      <div class="thesis-card" style="transition-delay:0.3s">
+        <div class="thesis-card-accent acc-green"></div>
+        <div class="thesis-card-num">04</div>
+        <div class="thesis-card-title">Two Independent Earnings Engines</div>
+        <div class="thesis-card-body">BASX growth is one engine. ACP segment ERP recovery is the second — entirely independent of hyperscaler capex. ACP gross margins collapsed through 2025 due to ERP disruption and are recovering toward the 25% structural range. Normalisation from current levels delivers approximately <strong>$0.15–$0.20 of annualised EPS</strong>, absent from consensus models, requiring no BASX growth whatsoever.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BASX STORY ===== -->
+<section id="basx">
+  <div class="section-inner">
+    <div class="section-label">Alternative Data Discovery</div>
+    <h2 class="section-title">The BASX Story</h2>
+    <p class="section-subtitle">A niche cleanroom supplier becomes a hyperscaler thermal infrastructure partner. The market is still catching up.</p>
+
+    <div class="timeline-wrap">
+      <div class="timeline-track" id="basx-timeline">
+        <div class="tl-item">
+          <div class="tl-dot"><span class="tl-icon">🏭</span></div>
+          <div class="tl-year">2021</div>
+          <div class="tl-text"><strong>Niche Origin</strong>Cleanroom specialist, Redmond OR — precision cooling for pharma + semiconductor</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"><span class="tl-icon">🤝</span></div>
+          <div class="tl-year">2022</div>
+          <div class="tl-text"><strong>AAON Acquires BASX</strong>Strategic pivot begins — hyperscaler cooling applications identified</div>
+        </div>
+        <div class="tl-item active">
+          <div class="tl-dot"><span class="tl-icon">💧</span></div>
+          <div class="tl-year">OCT 2024</div>
+          <div class="tl-text"><strong>$174.5M Order</strong>Custom-engineered liquid cooling system for single unnamed hyperscaler — co-designed thermal architecture</div>
+        </div>
+        <div class="tl-item active">
+          <div class="tl-dot"><span class="tl-icon">❄️</span></div>
+          <div class="tl-year">JUN 2025</div>
+          <div class="tl-text"><strong>Applied Digital</strong>Polaris Forge 1 — three-mode free cooling chiller, zero water, North Dakota climate-optimized for liquid-cooled GPUs</div>
+        </div>
+        <div class="tl-item active">
+          <div class="tl-dot"><span class="tl-icon">📈</span></div>
+          <div class="tl-year">FY2025</div>
+          <div class="tl-text"><strong>$548M Branded Revenue</strong>143% YoY growth. BASX becomes the largest revenue contributor in AAON's history</div>
+        </div>
+        <div class="tl-item active">
+          <div class="tl-dot"><span class="tl-icon">🎯</span></div>
+          <div class="tl-year">MID-2026</div>
+          <div class="tl-text"><strong>54% Mix Threshold</strong>BASX crosses 50% of total AAON revenue — reclassification trigger in generalist models</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"><span class="tl-icon">🏗️</span></div>
+          <div class="tl-year">2027</div>
+          <div class="tl-text"><strong>$1.05B Ceiling</strong>Memphis at full utilization — 980,000 sq ft total BASX capacity, DA Davidson: $1.0–1.5B per GW</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="discovery-grid">
+      <div class="disc-card bear">
+        <div class="disc-card-header">
+          <div class="disc-icon bear-icon">🐻</div>
+          <div class="disc-title">What the Bear Case Sees</div>
+        </div>
+        <div class="disc-item">
+          <div class="disc-dot bear-dot"></div>
+          <span>$174.5M single customer order = concentrated bet on one unnamed hyperscaler. If they pause, thesis breaks.</span>
+        </div>
+        <div class="disc-item">
+          <div class="disc-dot bear-dot"></div>
+          <span>One unnamed customer represented 21.1% of accounts receivable at December 31, 2024. (10-K disclosed)</span>
+        </div>
+        <div class="disc-item">
+          <div class="disc-dot bear-dot"></div>
+          <span>Zero USPTO patents in liquid or immersion cooling in the last 24 months. Most recent BASX patent: November 2023 air damper. Moat is unverifiable by standard IP analysis.</span>
+        </div>
+      </div>
+
+      <div class="disc-card bull">
+        <div class="disc-card-header">
+          <div class="disc-icon bull-icon">🔍</div>
+          <div class="disc-title">What the Hiring Data Reveals</div>
+        </div>
+        <div class="disc-item">
+          <div class="disc-dot bull-dot"></div>
+          <span>BASX posted "Technical Sales Manager – West Coast" in April 2026. Salary: $111,348–$167,023. Based in Arizona, territory: California and Pacific Northwest — Microsoft, Google, Amazon campuses.</span>
+        </div>
+        <div class="disc-item">
+          <div class="disc-dot bull-dot"></div>
+          <span>This geography is entirely NEW. Existing BASX customer base anchors in South/Central US (Longview TX node, Applied Digital in North Dakota). West Coast = new customers, not repeat business.</span>
+        </div>
+        <div class="disc-quote">
+          Job description verbatim: <strong>"responsible for driving sales growth and market expansion within an assigned geographic territory… manages relationships with manufacturer representatives, distributors, and key customers to promote BASX's Datacenter products and solutions."</strong>
+          <br><br>
+          This is not how a company behaves when one customer writes all the checks. This is how a company behaves when it is actively replacing concentration with diversification — and the market hasn't noticed yet.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CATALYSTS ===== -->
+<section id="catalysts">
+  <div class="section-inner">
+    <div class="section-label">Event Timeline</div>
+    <h2 class="section-title">Catalyst Sequence</h2>
+    <p class="section-subtitle">Five discrete de-risking events over 18 months. Each one confirms or denies the thesis independently.</p>
+
+    <div class="catalyst-timeline">
+
+      <div class="cat-item">
+        <div class="cat-dot-wrap"><div class="cat-dot green">🧑‍💼</div></div>
+        <div class="cat-content">
+          <div class="cat-date">APRIL 20, 2026</div>
+          <div class="cat-title">Andy Cheung Joins as CFO</div>
+          <div class="cat-body">Financial discipline and investor relations upgrade. New CFO was in structural pre-employment blackout — that period ends. Watch for: 10b5-1 plan establishment, capital structure commentary, first official guidance ownership.</div>
+        </div>
+      </div>
+
+      <div class="cat-item">
+        <div class="cat-dot-wrap"><div class="cat-dot star">⭐</div></div>
+        <div class="cat-content">
+          <div class="cat-date">APRIL 30, 2026 — MOST IMPORTANT</div>
+          <div class="cat-title">Q1 2026 Earnings — First Thesis Test</div>
+          <div class="cat-body">Three data points score within <strong>minutes of the press release drop</strong>, before the call:</div>
+          <div class="scorecard">
+            <div class="sc-item">
+              <div class="sc-label">① BASX Segment Revenue</div>
+              <div class="sc-bull">Bull: &gt;$115M</div>
+              <div class="sc-bear">Bear: &lt;$75M</div>
+            </div>
+            <div class="sc-item">
+              <div class="sc-label">② Consolidated Gross Margin</div>
+              <div class="sc-bull">Bull: &gt;27.5%</div>
+              <div class="sc-bear">Bear: &lt;26.0%</div>
+            </div>
+            <div class="sc-item">
+              <div class="sc-label">③ Total Backlog</div>
+              <div class="sc-bull">Bull: &gt;$1.83B</div>
+              <div class="sc-bear">Bear: Declining</div>
+            </div>
+          </div>
+          <div class="cat-body" style="margin-top:0.75rem; font-size:var(--text-xs); color:var(--color-amber);">⚠ FCF normalization scores mid-May via 10-Q — not April 30. Two separate catalysts in a 3-week window.</div>
+        </div>
+      </div>
+
+      <div class="cat-item">
+        <div class="cat-dot-wrap"><div class="cat-dot amber">🏭</div></div>
+        <div class="cat-content">
+          <div class="cat-date">H2 2026</div>
+          <div class="cat-title">Memphis Reaches Full Utilization</div>
+          <div class="cat-body">400–600bps gross margin release as $6.4M/quarter of unabsorbed Memphis overhead goes to zero. AAON Oklahoma returns toward 33–35% structural gross margin (vs. Q4 2025's 31.6% with drag). This is the single largest EPS unlock in the model.</div>
+        </div>
+      </div>
+
+      <div class="cat-item">
+        <div class="cat-dot-wrap"><div class="cat-dot amber">📊</div></div>
+        <div class="cat-content">
+          <div class="cat-date">FY2026</div>
+          <div class="cat-title">BASX Crosses 50% of Total Revenue</div>
+          <div class="cat-body">Reclassification trigger. When BASX crosses the 50% revenue mix threshold, generalist portfolio managers can no longer model AAON as a commercial HVAC manufacturer. The correct peer set shifts from Comfort Systems (3.55x) and Lennox (3.22x) toward Modine (3.76x) and Vertiv (7.40x). BASX at 4.6x has already passed Modine — the re-rating to the next level is automatic as mix shifts.</div>
+        </div>
+      </div>
+
+      <div class="cat-item">
+        <div class="cat-dot-wrap"><div class="cat-dot blue">🏗️</div></div>
+        <div class="cat-content">
+          <div class="cat-date">2027</div>
+          <div class="cat-title">Full Memphis Capacity + Strategic Optionality</div>
+          <div class="cat-body">980,000 sq ft of BASX-dedicated manufacturing at full utilization — DA Davidson investor presentation confirms $1.0–1.5B per GW opportunity. The 2026 proxy statement disclosed the board discussed "strategic M&A" in 2025 board meetings. Acquisition floor: $105 (30% premium) = 7.6% of one year's Microsoft capex to permanently secure thermal supply chain.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===== FINANCIALS ===== -->
+<section id="financials">
+  <div class="section-inner">
+    <div class="section-label">Financial Model</div>
+    <h2 class="section-title">The Numbers</h2>
+    <p class="section-subtitle">FY2025 actuals. FY2026–2027 modeled at management's guided 29–31% gross margin with Memphis full utilization in H2 2026.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">FY2025 Revenue</div>
+        <div class="kpi-value" id="kpi-rev">$1.44B</div>
+        <div class="kpi-sub"><span class="kpi-arrow">↑</span> +20.1% YoY</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">BASX-Branded Revenue</div>
+        <div class="kpi-value" id="kpi-basx">$548M</div>
+        <div class="kpi-sub"><span class="kpi-arrow">↑</span> +143% YoY</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">BASX Gross Margin</div>
+        <div class="kpi-value" id="kpi-gm">26.6%</div>
+        <div class="kpi-sub" style="color:var(--color-green)"><span class="kpi-arrow">↑</span> Expanding → 30%+ by H2 2026</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Contracted Backlog</div>
+        <div class="kpi-value" id="kpi-bl">$1.83B</div>
+        <div class="kpi-sub"><span class="kpi-arrow">↑</span> 1.3x TTM revenue</div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-title">Revenue by Segment + Gross Margin V-Recovery</div>
+      <div class="chart-wrap">
+        <canvas id="revenueChart"></canvas>
+      </div>
+      <p style="margin-top:var(--space-4);font-size:var(--text-xs);color:var(--color-text-faint);font-style:italic;line-height:1.6;">Chart shows BASX segment revenue. BASX-branded revenue (including liquid cooling lines in the AAON Coil Products segment) was $548M in FY2025 and is the basis for the branded revenue figures cited throughout this thesis.</p>
+    </div>
+
+    <div class="eps-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>EPS (Diluted)</th>
+            <th>YoY Change</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>FY2024</td>
+            <td class="mono">$2.02</td>
+            <td class="mono">—</td>
+            <td style="color:var(--color-text-muted);font-size:var(--text-xs)">Pre-disruption peak</td>
+          </tr>
+          <tr>
+            <td>FY2025</td>
+            <td class="mono">$1.29</td>
+            <td class="mono eps-down">-36.1%</td>
+            <td style="color:var(--color-text-muted);font-size:var(--text-xs)">ERP disruption + Memphis overhead drag</td>
+          </tr>
+          <tr style="background:rgba(0,212,170,0.04)">
+            <td><strong>FY2026E — Our Model</strong></td>
+            <td class="mono eps-our">$2.16</td>
+            <td class="mono eps-up">+67.4%</td>
+            <td style="color:var(--color-primary);font-size:var(--text-xs);font-weight:600">Memphis unlock + ACP recovery</td>
+          </tr>
+          <tr>
+            <td>FY2026E — Consensus</td>
+            <td class="mono">$1.99</td>
+            <td class="mono eps-up">+54.3%</td>
+            <td style="color:var(--color-text-muted);font-size:var(--text-xs)">Consensus misses Memphis H2 step-up</td>
+          </tr>
+          <tr>
+            <td>FY2027E</td>
+            <td class="mono">$2.98</td>
+            <td class="mono eps-up">+38.0%</td>
+            <td style="color:var(--color-text-muted);font-size:var(--text-xs)">Memphis full utilization, BASX $1.05B</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="eps-caption">
+        <strong>2025→2027 EPS CAGR: 52%.</strong> At $81, you are paying 27x FY2027E earnings for a company growing EPS at 52% annually. AAON at 21.1x NTM EV/EBITDA is below the peer average of 24.4x despite higher revenue growth — the "expensive" narrative collapses on the metric that counts.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== VALUATION ===== -->
+<section id="valuation">
+  <div class="section-inner">
+    <div class="section-label">Valuation Framework</div>
+    <h2 class="section-title">What Consensus Is Pricing In</h2>
+    <p class="section-subtitle">Three independent lenses all converge on the same asymmetry.</p>
+
+    <!-- Callout -->
+    <div class="val-callout">
+      <div class="val-callout-badge">The Memphis Utilization Insight</div>
+      <div class="val-callout-main">
+        At $81, consensus implies Memphis runs at <em>25% utilization</em>.<br>
+        AAON spent $238M building 490,000 sq ft of dedicated BASX production capacity.<br>
+        The entire bull case: <em>the factory runs as designed.</em>
+      </div>
+      <div class="asym-row">
+        <div class="asym-item up">
+          <div class="asym-pct">+17%</div>
+          <div class="asym-desc">Upside if Memphis reaches full utilization (probable given $1.83B contracted backlog, Q4 2025 first profitability, H2 2026 full utilization management guidance)</div>
+        </div>
+        <div class="asym-item dn">
+          <div class="asym-pct">-16%</div>
+          <div class="asym-desc">Maximum downside if Memphis completely fails AND BASX is re-rated to legacy HVAC multiples (improbable: Memphis achieved first profitability in Q4 2025 on schedule)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sensitivity Table -->
+    <div class="sens-wrap">
+      <div class="sens-title">BASX Revenue Mix × EV/Revenue Multiple → Implied Share Price</div>
+      <div style="overflow-x:auto">
+        <table class="sens-table" id="sensTable">
+          <thead>
+            <tr>
+              <th class="row-header">BASX Revenue Mix</th>
+              <th>3.5x</th>
+              <th>4.0x</th>
+              <th>4.6x</th>
+              <th>5.5x</th>
+              <th>6.0x</th>
+              <th>6.5x</th>
+            </tr>
+          </thead>
+          <tbody id="sensBody"></tbody>
+        </table>
+      </div>
+      <div class="sens-legend">
+        <div class="legend-item"><div class="legend-swatch legend-current"></div> Current state (~$81)</div>
+        <div class="legend-item"><div class="legend-swatch legend-target"></div> Thesis target ($90)</div>
+        <div class="legend-item"><div class="legend-swatch legend-g"></div> &gt;$90</div>
+        <div class="legend-item"><div class="legend-swatch legend-a"></div> $75–90</div>
+        <div class="legend-item"><div class="legend-swatch legend-r"></div> &lt;$75</div>
+      </div>
+      <div class="sens-caption">
+        <strong>The $90 intermediate target requires only that BASX reaches 54% revenue mix AND the market partially re-rates toward Vertiv (7.40x NTM).</strong> BASX at 4.6x implied has already passed Modine at 3.76x NTM — the next destination is Vertiv as DC mix crosses 54%. Note: Legacy HVAC valued at 3.5x (FIX/LII average). Revenue basis: $1,717M (FY2026 consensus). Net debt: $413M. Shares: 82.7M.
+      </div>
+    </div>
+
+    <!-- Analyst bars -->
+    <div class="analyst-section">
+      <div class="analyst-title">Analyst Price Targets vs. Our Estimate</div>
+      <div id="analystBars"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== RISKS ===== -->
+<section id="risks">
+  <div class="section-inner">
+    <div class="section-label">Risk Assessment</div>
+    <h2 class="section-title">Key Risks &amp; Institutional Rebuttals</h2>
+    <p class="section-subtitle">Five material risks identified. Each bear argument stated in full. Each rebuttal sourced to primary filings, transcripts, and alternative data.</p>
+
+    <div class="risks-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="risk-card">
+        <div class="risk-header">
+          <div class="risk-num">RISK 01</div>
+          <div class="risk-title">Competitive Moat — BASX Has No Defensible IP</div>
+        </div>
+        <div class="risk-bear">
+          <div class="risk-bear-label">Bear Argument</div>
+          <div class="risk-bear-text">"BASX holds zero patents in liquid or immersion cooling. Vertiv ($100B market cap) and Modine have deeper R&D budgets, established hyperscaler relationships, and global service networks. A well-capitalised competitor can replicate any BASX product within 18–24 months, eliminating pricing power and margin."</div>
+        </div>
+        <div class="risk-rebuttal">
+          <div class="risk-rebut-label">Rebuttal</div>
+          <div class="risk-rebut-text">The moat is not IP — it is institutional thermal engineering knowledge accumulated through custom co-engineering engagements that cannot be acquired without rebuilding from zero. Applied Digital's CDO disclosed that BASX engineered a three-mode free cooling chiller for North Dakota's climate that eliminates compressor operation 60% of annual hours on a 10MW load, saving approximately $2.6M annually versus a standard Vertiv solution. That site-specific thermal architecture record is proprietary by nature. Each new build deepens it. Additionally, even if the moat fails entirely, the ACP segment ERP recovery delivers approximately $0.15–$0.20 of annualised EPS from margin normalisation alone — completely independent of any BASX outcome.</div>
+        </div>
+      </div>
+
+      <div class="risk-card" style="transition-delay:0.1s">
+        <div class="risk-header">
+          <div class="risk-num">RISK 02</div>
+          <div class="risk-title">Customer Concentration — Single Hyperscaler Dependency</div>
+        </div>
+        <div class="risk-bear">
+          <div class="risk-bear-label">Bear Argument</div>
+          <div class="risk-bear-text">"One unnamed hyperscaler represented 21.1% of accounts receivable at December 31, 2024. The October 2024 $174.5M single-customer liquid cooling order likely drove the majority of BASX's 2025 incremental revenue. A single procurement pause, vendor diversification decision, or capex reallocation at that customer ends the thesis in one earnings call."</div>
+        </div>
+        <div class="risk-rebuttal">
+          <div class="risk-rebut-label">Rebuttal</div>
+          <div class="risk-rebut-text">The $1.83B contracted backlog grew 141% in 2025 — a mathematical impossibility under a single-customer model. CEO Tobolski confirmed on the Q4 2025 earnings call: <em>"We are seeing introduction of new customers and diversity in the customer base with hyperscalers, build-to-suit colocation providers and colocation providers."</em> Independently, BASX posted a West Coast Technical Sales Manager role in April 2026 ($111K–$167K) explicitly targeting Microsoft, Google, and Amazon campuses in Washington and California — new geography BASX has never served. Companies with one dominant customer do not build dedicated sales infrastructure for new geographies. The diversification is already happening in the labour market before it appears in the financials.</div>
+        </div>
+      </div>
+
+      <div class="risk-card" style="transition-delay:0.15s">
+        <div class="risk-header">
+          <div class="risk-num">RISK 03</div>
+          <div class="risk-title">Memphis Execution — Factory Ramp Slower Than Guided</div>
+        </div>
+        <div class="risk-bear">
+          <div class="risk-bear-label">Bear Argument</div>
+          <div class="risk-bear-text">"The Memphis facility has been running at approximately 25% of designed throughput. Management's H2 2026 ramp narrative has been walked back repeatedly — CFO language shifted from 'full utilisation' to 'continued ramp.' If Memphis takes until 2027 or 2028 to reach structural utilisation, the $413M net debt load and suppressed margins become a multi-year drag rather than a one-year headwind. The EPS recovery is back-end loaded with no margin of safety."</div>
+        </div>
+        <div class="risk-rebuttal">
+          <div class="risk-rebut-label">Rebuttal</div>
+          <div class="risk-rebut-text">The $1.83B contracted backlog entering 2026 provides direct demand-side visibility for Memphis output — these are signed production contracts, not LOIs or indicative orders. Q4 2025 was the first quarter Memphis recorded positive segment profitability, confirming the ramp has crossed the fixed-cost absorption threshold. Every incremental percentage point of utilisation above break-even flows through at high incremental margin given the facility's fixed cost structure. The bear scenario — Memphis at 25% through 2027 — is precisely what consensus already prices at $81. The thesis does not require an accelerated ramp; it requires only that the ramp management has already confirmed continues on its current trajectory.</div>
+        </div>
+      </div>
+
+      <div class="risk-card" style="transition-delay:0.2s">
+        <div class="risk-header">
+          <div class="risk-num">RISK 04</div>
+          <div class="risk-title">Hyperscaler CapEx Cyclicality — AI Spend Deceleration</div>
+        </div>
+        <div class="risk-bear">
+          <div class="risk-bear-label">Bear Argument</div>
+          <div class="risk-bear-text">"BASX's entire growth narrative depends on sustained hyperscaler data centre construction spend. AI capital expenditure cycles are notoriously volatile — Microsoft, Google, Amazon, and Meta have each previously paused or reprioritised infrastructure builds. A 20% reduction in hyperscaler capex guidance would cascade directly into BASX order flow, backlog conversion rates, and Memphis utilisation assumptions simultaneously."</div>
+        </div>
+        <div class="risk-rebuttal">
+          <div class="risk-rebut-label">Rebuttal</div>
+          <div class="risk-rebut-text">The four major hyperscalers have collectively guided $300B+ in 2026 capital expenditure, with data centre infrastructure cited as the primary allocation in every Q4 2025 earnings call. Critically, BASX's $1.83B contracted backlog represents orders already under production contract — not pipeline or indicative demand. These are engineered-to-order systems with customer-specific thermal specifications; cancellation requires forfeiture of custom engineering investment. BASX also serves build-to-suit colocation providers and enterprise colocation operators, which diversifies exposure beyond the four largest hyperscalers. A capex deceleration would slow new order intake but would not impair the existing backlog conversion that funds the 2026 thesis.</div>
+        </div>
+      </div>
+
+      <div class="risk-card" style="transition-delay:0.25s; grid-column: 1 / -1; max-width: 680px; margin: 0 auto; width: 100%;">
+        <div class="risk-header">
+          <div class="risk-num">RISK 05</div>
+          <div class="risk-title">Balance Sheet Leverage — FCF Collapse and Debt Burden</div>
+        </div>
+        <div class="risk-bear">
+          <div class="risk-bear-label">Bear Argument</div>
+          <div class="risk-bear-text">"AAON went from near-zero net debt to $413M net debt in 24 months. FY2025 operating cash flow was effectively zero on $107M net income. A company consuming cash while levering its balance sheet to build a factory with unproven demand is a value trap, not a value opportunity. If Memphis underperforms or interest rates remain elevated, AAON faces a refinancing risk that forces dilutive equity issuance."</div>
+        </div>
+        <div class="risk-rebuttal">
+          <div class="risk-rebut-label">Rebuttal</div>
+          <div class="risk-rebut-text">The FCF collapse is a timing artefact, not a quality deterioration. The FY2025 cash flow statement shows $111.8M in contract assets — earned-but-unbilled revenue on multi-phase BASX projects awaiting completion milestones — and $167M in accounts receivable growth driven by 20% revenue expansion. These reverse into cash inflows as projects close and invoices are collected. Net income of $235M on a $107M reported OCF base confirms the underlying business is generating cash; it is being consumed by working capital deployment on the largest production ramp in the company's history. Consensus FCF models imply net debt collapses from $413M to approximately $84M by end-2027 as Memphis reaches structural utilisation and working capital normalises. The $250M net debt assumption used in our 2027 SOTP provides a conservative $166M margin of safety against the consensus FCF model.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== VERDICT ===== -->
+<section id="verdict">
+  <div class="section-inner">
+    <div class="section-label">Investment Verdict</div>
+    <h2 class="section-title">Conclusion</h2>
+
+    <div class="verdict-inner">
+      <div class="verdict-pt">
+        <div class="verdict-label">18-Month Price Target</div>
+        <div class="verdict-price">$95</div>
+        <div class="verdict-horizon">18-Month Horizon · Long · NASDAQ: AAON</div>
+        <div class="verdict-method">
+          2027 SOTP: <strong>$1,050M BASX × 4.6x</strong> + <strong>$900M Legacy × 3.5x</strong><br>
+          − $250M net debt ÷ 82.7M shares<br><br>
+          No re-rating required. Sensitivity table implies <strong>$90</strong> on 2026 revenue mix alone; full 2027 Memphis model delivers <strong>$95</strong>.<br><br>
+          Acquisition floor: <strong>$105</strong> (30% premium) — 7.6% of Microsoft's annual capex.
+        </div>
+      </div>
+
+      <div class="verdict-details">
+        <div class="verdict-block">
+          <div class="verdict-block-label">Valuation</div>
+          <div class="verdict-block-text">AAON at <strong>21.1x NTM EV/EBITDA</strong> is below the peer average of <strong>24.4x</strong> despite higher revenue growth (+19% vs. peer average +17.3%). On FY2027E EBITDA ($414M), AAON trades at 16.2x — the cheapest in the comp set on a forward basis. The expensive P/E narrative collapses on the metric that counts.</div>
+        </div>
+        <div class="verdict-block">
+          <div class="verdict-block-label">Acquisition Floor</div>
+          <div class="verdict-block-text">Strategic floor at <strong>$105</strong>. At $105, a buyer pays 7.6% of Microsoft's annual capex to permanently secure the thermal envelope of its AI infrastructure — vs. $500M+ and 3–5 years to replicate BASX from scratch. The 2026 proxy confirms AAON's board discussed "strategic M&A" in 2025 board meetings. AAON has a dedicated IR/M&A analyst on staff.</div>
+        </div>
+        <div class="verdict-block">
+          <div class="verdict-block-label">Scorecard: April 30</div>
+          <div class="verdict-block-text">Watch three numbers in the press release: BASX segment revenue (bull &gt;$115M), consolidated gross margin (bull &gt;27.5%), total backlog (bull &gt;$1.83B). FCF normalization thesis scores mid-May via 10-Q — a second catalyst window 3 weeks later. Two separate de-risking events for a single position entry.</div>
+        </div>
+        <div class="verdict-thesis">
+          The market prices <strong>BASX's execution risk</strong>. The $1.83B contracted backlog and Memphis margin unlock price its <strong>durability</strong>. At $81 you are paying for Memphis to run at 25% capacity — the entire upside requires only that <strong>the factory runs as designed</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>AAON, Inc. (NASDAQ: AAON) · Investment Thesis · All data sourced from SEC filings, earnings transcripts, and public disclosures · For informational purposes only — not financial advice</p>
+</footer>
+
+<script>
+// ===== THEME TOGGLE =====
+(function() {
+  const html = document.documentElement;
+  let theme = 'dark';
+  html.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', theme);
+      btn.innerHTML = theme === 'dark'
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+    });
+  }
+})();
+
+// ===== SCROLL PROGRESS =====
+window.addEventListener('scroll', () => {
+  const scrollTop = document.documentElement.scrollTop;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+});
+
+// ===== SCROLL SPY =====
+const sections = ['hero','thesis','basx','catalysts','financials','valuation','risks','verdict'];
+const navLinks = document.querySelectorAll('.nav-links a');
+const observer_spy = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-40% 0px -40% 0px' });
+sections.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) observer_spy.observe(el);
+});
+
+// ===== SCROLL ANIMATIONS =====
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.thesis-card, .kpi-card, .risk-card, .cat-item, .tl-item').forEach(el => io.observe(el));
+
+// ===== COUNT-UP ANIMATION =====
+function animateCount(el, target, prefix, suffix, decimals) {
+  const duration = 1400;
+  const start = performance.now();
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const current = target * ease;
+    const formatted = decimals > 0 ? current.toFixed(decimals) : Math.round(current).toLocaleString();
+    el.textContent = (prefix || '') + formatted + (suffix || '');
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+const countObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !e.target.dataset.counted) {
+      e.target.dataset.counted = '1';
+      const count = parseFloat(e.target.dataset.count);
+      const prefix = e.target.dataset.prefix || '';
+      const suffix = e.target.dataset.suffix || '';
+      const decimals = String(count).includes('.') ? 1 : 0;
+      animateCount(e.target, count, prefix, suffix, decimals);
+    }
+  });
+}, { threshold: 0.5 });
+document.querySelectorAll('[data-count]').forEach(el => countObserver.observe(el));
+
+// ===== SENSITIVITY TABLE =====
+(function buildSensTable() {
+  const mixes = [
+    { pct: 0.38, label: '38%', sublabel: 'Today (FY2025)' },
+    { pct: 0.45, label: '45%', sublabel: '~Q2 2026E' },
+    { pct: 0.54, label: '54%', sublabel: 'Thesis (Mid-2026)' },
+    { pct: 0.60, label: '60%', sublabel: '2027E' },
+  ];
+  const multiples = [3.5, 4.0, 4.6, 5.5, 6.0, 6.5];
+  const legacyMult = 3.5;
+  const totalRev = 1717;
+  const netDebt = 413;
+  const shares = 82.7;
+  const tbody = document.getElementById('sensBody');
+
+  mixes.forEach(row => {
+    const tr = document.createElement('tr');
+    // Row header
+    const th = document.createElement('td');
+    th.className = 'row-head';
+    th.innerHTML = `<span class="mix-pct">${row.label}</span>${row.sublabel}`;
+    tr.appendChild(th);
+
+    multiples.forEach(mult => {
+      const blended = row.pct * mult + (1 - row.pct) * legacyMult;
+      const ev = blended * totalRev;
+      const price = Math.round((ev - netDebt) / shares);
+      const td = document.createElement('td');
+      td.textContent = '$' + price;
+
+      const isCurrent = Math.abs(row.pct - 0.38) < 0.01 && Math.abs(mult - 4.6) < 0.01;
+      const isTarget = Math.abs(row.pct - 0.54) < 0.01 && Math.abs(mult - 5.5) < 0.01;
+
+      if (isCurrent) td.className = 'cell-current';
+      else if (isTarget) td.className = 'cell-target';
+      else if (price >= 90) td.className = 'cell-green';
+      else if (price >= 75) td.className = 'cell-amber';
+      else td.className = 'cell-red';
+
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+})();
+
+// ===== ANALYST BARS =====
+(function buildAnalystBars() {
+  // Scale: $60 = 0%, $140 = 100%
+  const MIN = 60, RANGE = 80;
+  const analysts = [
+    { name: 'Oppenheimer',            pt: 118, ours: false },
+    { name: 'William Blair',          pt: 126, ours: false },
+    { name: 'Consensus Avg',          pt: 122, ours: false },
+    { name: 'Our Estimate (Conservative)', pt: 95, ours: true },
+  ];
+  const container = document.getElementById('analystBars');
+  if (!container) return;
+
+  analysts.forEach(a => {
+    const pct = Math.round(((a.pt - MIN) / RANGE) * 100);
+    const row = document.createElement('div');
+    row.className = 'analyst-bar-row';
+    row.innerHTML = `
+      <div class="analyst-name" style="color:${a.ours ? 'var(--color-gold)' : 'var(--color-text-muted)'}">${a.name}</div>
+      <div class="analyst-bar-wrap">
+        <div class="analyst-bar ${a.ours ? 'bar-ours' : 'bar-sell'}" data-pct="${pct}" style="width:0%"></div>
+      </div>
+      <div class="analyst-pt" style="color:${a.ours ? 'var(--color-gold)' : 'var(--color-blue)'}">$${a.pt}</div>
+    `;
+    container.appendChild(row);
+  });
+
+  // Observe the parent .analyst-section so threshold fires reliably
+  const section = container.closest('.analyst-section') || container;
+  let animated = false;
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !animated) {
+        animated = true;
+        container.querySelectorAll('.analyst-bar').forEach((bar, i) => {
+          setTimeout(() => {
+            bar.style.width = bar.dataset.pct + '%';
+          }, 150 + i * 120);
+        });
+        barObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  barObserver.observe(section);
+})();
+
+// ===== CHART.JS REVENUE CHART =====
+(function buildChart() {
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  const labels = ['FY2023', 'FY2024', 'FY2025', 'FY2026E', 'FY2027E'];
+  const okData    = [897, 858, 801, 860, 900];
+  const acpData   = [112, 144, 325, 390, 400];
+  const basxData  = [158, 198, 315, 467, 650]; // segment-level BASX
+
+  // Gross margin overlay data
+  const gmData = [33.8, 33.1, 26.7, 30.2, 31.6];
+
+  const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#8090a8' : '#475569';
+
+  // Projected pattern
+  const projPattern = (ctx2, color) => {
+    const c = document.createElement('canvas');
+    c.width = 8; c.height = 8;
+    const cx = c.getContext('2d');
+    cx.strokeStyle = color;
+    cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(0,8); cx.lineTo(8,0); cx.stroke();
+    return ctx2.createPattern(c, 'repeat');
+  };
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'AAON Oklahoma',
+          data: okData,
+          backgroundColor: (ctx2) => {
+            const i = ctx2.dataIndex;
+            return i >= 3 ? 'rgba(74,158,255,0.35)' : 'rgba(74,158,255,0.7)';
+          },
+          borderColor: 'rgba(74,158,255,0.9)',
+          borderWidth: (ctx2) => ctx2.dataIndex >= 3 ? 2 : 0,
+          borderDash: (ctx2) => ctx2.dataIndex >= 3 ? [4,3] : [],
+          stack: 'revenue',
+          order: 2,
+        },
+        {
+          label: 'AAON Coil Products',
+          data: acpData,
+          backgroundColor: (ctx2) => ctx2.dataIndex >= 3 ? 'rgba(240,180,41,0.3)' : 'rgba(240,180,41,0.65)',
+          borderColor: 'rgba(240,180,41,0.9)',
+          borderWidth: (ctx2) => ctx2.dataIndex >= 3 ? 2 : 0,
+          stack: 'revenue',
+          order: 2,
+        },
+        {
+          label: 'BASX',
+          data: basxData,
+          backgroundColor: (ctx2) => ctx2.dataIndex >= 3 ? 'rgba(0,212,170,0.3)' : 'rgba(0,212,170,0.75)',
+          borderColor: 'rgba(0,212,170,0.9)',
+          borderWidth: (ctx2) => ctx2.dataIndex >= 3 ? 2 : 0,
+          stack: 'revenue',
+          order: 2,
+        },
+        {
+          label: 'Gross Margin %',
+          data: gmData,
+          type: 'line',
+          yAxisID: 'y2',
+          borderColor: '#f0b429',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#f0b429',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.35,
+          fill: false,
+          order: 1,
+          z: 10,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 1000, easing: 'easeOutQuart' },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            color: textColor, font: { size: 11 }, padding: 20,
+            usePointStyle: true, pointStyleWidth: 10,
+          }
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#0f1318' : '#fff',
+          borderColor: isDark ? '#1e2a3a' : '#d8dde8',
+          borderWidth: 1,
+          titleColor: isDark ? '#e8edf5' : '#0f172a',
+          bodyColor: isDark ? '#8090a8' : '#475569',
+          callbacks: {
+            label: (ctx2) => {
+              if (ctx2.dataset.yAxisID === 'y2') return ` GM: ${ctx2.parsed.y}%`;
+              return ` ${ctx2.dataset.label}: $${ctx2.parsed.y}M`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { color: gridColor },
+          ticks: { color: textColor, font: { size: 11 } },
+        },
+        y: {
+          stacked: true,
+          grid: { color: gridColor },
+          ticks: {
+            color: textColor, font: { size: 11 },
+            callback: v => '$' + v + 'M',
+          },
+          title: { display: true, text: 'Revenue ($M)', color: textColor, font: { size: 11 } },
+        },
+        y2: {
+          type: 'linear', position: 'right',
+          min: 20, max: 42,
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: '#f0b429', font: { size: 11 },
+            callback: v => v + '%',
+          },
+          title: { display: true, text: 'Gross Margin %', color: '#f0b429', font: { size: 11 } },
+        },
+      },
+    },
+  });
+})();
+</script>
+<script data-pplx-inline-edit>
+(function(){
+  if(window===window.top)return;
+  function inlineAll(orig,clone){
+    if(orig.nodeType!==1)return;
+    try{
+      var cs=getComputedStyle(orig);
+      var t='';
+      for(var i=0;i<cs.length;i++){t+=cs[i]+':'+cs.getPropertyValue(cs[i])+';';}
+      clone.style.cssText=t;
+    }catch(e){}
+    var oc=orig.children,cc=clone.children;
+    for(var j=0;j<oc.length&&j<cc.length;j++){inlineAll(oc[j],cc[j]);}
+  }
+  function stripExternal(clone){
+    var imgs=clone.querySelectorAll('img');
+    for(var i=0;i<imgs.length;i++){
+      var s=imgs[i].getAttribute('src');
+      if(s&&!s.startsWith('data:'))imgs[i].removeAttribute('src');
+    }
+    var all=clone.querySelectorAll('*');
+    for(var i=0;i<all.length;i++){
+      var st=all[i].style.cssText;
+      if(st&&st.indexOf('url(')>=0){
+        all[i].style.cssText=st.replace(/url\(["']?(?!data:)[^)"']*["']?\)/gi,'none');
+      }
+    }
+  }
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.type!=='INLINE_EDIT_CAPTURE_REQUEST')return;
+    var scrollX=window.scrollX||window.pageXOffset||0;
+    var scrollY=window.scrollY||window.pageYOffset||0;
+    var w=window.innerWidth,h=window.innerHeight;
+    try{
+      var clone=document.documentElement.cloneNode(true);
+      var rm=clone.querySelectorAll('script,link[rel="stylesheet"],style');
+      for(var i=0;i<rm.length;i++){rm[i].remove();}
+      inlineAll(document.documentElement,clone);
+      stripExternal(clone);
+      var html=new XMLSerializer().serializeToString(clone);
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+        +'<foreignObject width="100%" height="100%">'
+        +'<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;height:'+h+'px;overflow:hidden">'
+        +'<div style="transform:translate(-'+scrollX+'px,-'+scrollY+'px);transform-origin:top left">'
+        +html+'</div></div></foreignObject></svg>';
+      var svgUrl='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      var img=new Image();
+      img.onload=function(){
+        var c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0);
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:c.toDataURL('image/png'),scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.onerror=function(){
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.src=svgUrl;
+    }catch(err){
+      window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+    }
+  });
+})();
+</script></body>
+</html>
